@@ -1,0 +1,53 @@
+name: spring backend auto deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git repository가져오기
+        uses: actions/checkout@v4
+
+      - name: jdk 17 설치하기
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name : 실행파일 빌드
+        run : chmod +x ./gradlew && ./gradlew clean build
+
+      - name: 도커 이미지 빌드
+        run: docker build -t ${{ secrets.DOCKER_USER }}/spring-test:mixed .
+
+      - name: 도커 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_KEY }}
+
+      - name: 도커 허브에 푸시
+        run: docker push ${{ secrets.DOCKER_USER }}/spring-test:mixed
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: EC2 로 ssh 로그인 및 배포
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script_stop: true
+          script: |
+            # docker stop spring || true
+            # docker rm spring || true
+            # docker rmi ${{ secrets.DOCKER_USER }}/spring-test:mixed || true
+            docker run -d -p 8080:8080 --name spring ${{ secrets.DOCKER_USER }}/spring-test:mixed
