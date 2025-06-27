@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @CrossOrigin(origins = "*", methods = RequestMethod.GET)
 public class MainController {
-    @GetMapping
+    @GetMapping("/movies")
     public MoviesDto hello(){
         MoviesDto movies = new MoviesDto();
         MovieDto movieDto = new
